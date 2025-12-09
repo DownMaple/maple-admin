@@ -1,0 +1,15 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oxc-project/oxc/main/npm/oxlint/configuration_schema.json",
+  "rules": {
+    "vue/multi-word-component-names": "warn",
+    "vue/component-name-in-template-casing": "warn"
+  },
+  "ignorePatterns": [
+    "**/node_modules",
+    "**/dist",
+    "**/.output",
+    "**/.nuxt",
+    "**/.vite",
+    "**/.turbo"
+  ]
+}
