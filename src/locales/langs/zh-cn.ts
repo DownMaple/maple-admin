@@ -173,15 +173,6 @@ const local: App.I18n.Schema = {
     'document_element-plus': 'Element Plus文档',
     'user-center': '个人中心',
     about: '关于',
-    function: '系统功能',
-    function_tab: '标签页',
-    'function_multi-tab': '多标签页',
-    'function_hide-child': '隐藏子菜单',
-    'function_hide-child_one': '隐藏子菜单',
-    'function_hide-child_two': '菜单二',
-    'function_hide-child_three': '菜单三',
-    'function_toggle-auth': '切换权限',
-    'function_super-page': '超级管理员可见',
     manage: '系统管理',
     manage_user: '用户管理',
     'manage_user-detail': '用户详情',
@@ -220,7 +211,10 @@ const local: App.I18n.Schema = {
     plugin_gantt_vtable: 'VTableGantt',
     plugin_typeit: '打字机',
     plugin_tables: '表格',
-    plugin_tables_vtable: 'VTable'
+    plugin_tables_vtable: 'VTable',
+    document_alova: 'Alova文档',
+    'demo-route': '示例路由',
+    'demo-route_child': '示例路由子页面'
   },
   page: {
     login: {

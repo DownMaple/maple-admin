@@ -4,6 +4,7 @@ import { useRouterPush } from '@/hooks/common/router';
 import { useForm, useFormRules } from '@/hooks/common/form';
 import { useCaptcha } from '@/hooks/business/captcha';
 import { $t } from '@/locales';
+import { encryptPassword } from '@/utils/crypto';
 
 defineOptions({ name: 'Register' });
 
@@ -38,7 +39,8 @@ const rules = computed<Record<keyof FormModel, App.Global.FormRule[]>>(() => {
 
 async function handleSubmit() {
   await validate();
-  // request to register
+  const encryptedPassword = encryptPassword(model.value.password);
+  // request to register with encryptedPassword
   window.$message?.success($t('page.login.common.validateSuccess'));
 }
 </script>

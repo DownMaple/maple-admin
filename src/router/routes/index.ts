@@ -1,3 +1,4 @@
+import type { RouteRecordRaw } from 'vue-router';
 import type { CustomRoute, ElegantConstRoute, ElegantRoute } from '@elegant-router/types';
 import { generatedRoutes } from '../elegant/routes';
 import { layouts, views } from '../elegant/imports';
@@ -204,5 +205,153 @@ export function createStaticRoutes() {
  * @param routes Elegant routes
  */
 export function getAuthVueRoutes(routes: ElegantConstRoute[]) {
-  return transformElegantRoutesToVueRoutes(routes, layouts, views);
+  // 分离静态路由和动态路由
+  const staticRoutes: ElegantConstRoute[] = [];
+  const dynamicRoutes: ElegantConstRoute[] = [];
+
+  function separateRoutes(routeList: ElegantConstRoute[], isStatic: boolean = true) {
+    routeList.forEach(route => {
+      const meta = route.meta as Record<string, unknown>;
+      const hasDynamicComponent = !!meta?.dynamicComponent;
+
+      if (hasDynamicComponent || !isStatic) {
+        dynamicRoutes.push(route);
+      } else {
+        // 检查子路由是否有动态组件
+        let hasChildDynamic = false;
+        if (route.children) {
+          route.children.forEach(child => {
+            const childMeta = child.meta as Record<string, unknown>;
+            if (childMeta?.dynamicComponent) {
+              hasChildDynamic = true;
+            }
+          });
+        }
+
+        if (hasChildDynamic) {
+          dynamicRoutes.push(route);
+        } else {
+          staticRoutes.push(route);
+        }
+      }
+    });
+  }
+
+  separateRoutes(routes);
+
+  // 转换静态路由（使用原有的转换函数）
+  const vueRoutes: RouteRecordRaw[] = transformElegantRoutesToVueRoutes(staticRoutes, layouts, views);
+
+  // 转换动态路由（使用自定义转换函数）
+  const dynamicVueRoutes = transformDynamicRoutes(dynamicRoutes);
+
+  return [...vueRoutes, ...dynamicVueRoutes];
+}
+
+/**
+ * 转换动态路由为 Vue Router 格式
+ */
+function transformDynamicRoutes(routes: ElegantConstRoute[]): RouteRecordRaw[] {
+  return routes.flatMap(route => transformDynamicRoute(route, true));
+}
+
+/**
+ * 转换单个动态路由
+ */
+function transformDynamicRoute(route: ElegantConstRoute, isFirstLevel: boolean = true): RouteRecordRaw[] {
+  const meta = route.meta as Record<string, unknown>;
+  const dynamicComponent = meta?.dynamicComponent as (() => Promise<unknown>) | undefined;
+
+  const { name, path, component, children } = route;
+
+  // 处理一级路由（需要包裹 layout）
+  if (isFirstLevel && component?.startsWith('layout.')) {
+    const layoutName = component.replace('layout.', '').split('$')[0] as keyof typeof layouts;
+    const layout = layouts[layoutName];
+
+    if (!layout) {
+      console.warn(`Layout "${layoutName}" not found for route "${name}"`);
+      return [];
+    }
+
+    // 检查是否是单级路由（layout.base$view.xxx 格式）
+    if (component.includes('$view.')) {
+      const viewName = component.split('$view.')[1];
+      const viewComponent = dynamicComponent || views[viewName as keyof typeof views];
+
+      if (!viewComponent) {
+        console.warn(`View component "${viewName}" not found for route "${name}"`);
+        return [];
+      }
+
+      // 单级路由：外层是 layout，内层是 view
+      const singleLevelRoute = {
+        path,
+        component: layout,
+        children: [
+          {
+            name,
+            path: '',
+            component: viewComponent,
+            meta: {
+              title: (meta?.title as string) || name,
+              icon: meta?.icon as string | undefined,
+              order: meta?.order as number | undefined
+            }
+          }
+        ]
+      } as RouteRecordRaw;
+
+      return [singleLevelRoute];
+    }
+
+    // 多级路由：有 children
+    const parentRoute: RouteRecordRaw = {
+      name,
+      path,
+      component: layout,
+      meta: {
+        title: (meta?.title as string) || name,
+        icon: meta?.icon as string | undefined,
+        order: meta?.order as number | undefined
+      },
+      children: children?.flatMap(child => transformDynamicRoute(child, false)) || []
+    };
+
+    // 添加 redirect 到第一个子路由
+    if (parentRoute.children?.length && !parentRoute.redirect) {
+      parentRoute.redirect = { name: parentRoute.children[0].name };
+    }
+
+    return [parentRoute];
+  }
+
+  // 子路由或非 layout 路由
+  const viewComponent = dynamicComponent || (component ? views[component.replace('view.', '') as keyof typeof views] : undefined);
+
+  if (!viewComponent && component) {
+    console.warn(`View component not found for route "${name}", component: "${component}"`);
+    return [];
+  }
+
+  const vueRoute = {
+    name,
+    path,
+    component: viewComponent,
+    meta: {
+      title: (meta?.title as string) || name,
+      icon: meta?.icon as string | undefined,
+      order: meta?.order as number | undefined
+    }
+  } as RouteRecordRaw;
+
+  const result: RouteRecordRaw[] = [vueRoute];
+
+  // 处理子路由
+  if (children?.length) {
+    const childRoutes = children.flatMap(child => transformDynamicRoute(child, false));
+    result.push(...childRoutes);
+  }
+
+  return result;
 }

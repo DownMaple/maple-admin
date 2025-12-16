@@ -5,6 +5,7 @@ import { useAuthStore } from '@/store/modules/auth';
 import { useRouterPush } from '@/hooks/common/router';
 import { useForm, useFormRules } from '@/hooks/common/form';
 import { $t } from '@/locales';
+import { encryptPassword } from '@/utils/crypto';
 
 defineOptions({ name: 'PwdLogin' });
 
@@ -18,8 +19,8 @@ interface FormModel {
 }
 
 const model = ref<FormModel>({
-  userName: 'Soybean',
-  password: '123456'
+  userName: 'superAdmin',
+  password: 'superAdmin'
 });
 
 const rules = computed<Record<keyof FormModel, App.Global.FormRule[]>>(() => {
@@ -34,7 +35,8 @@ const rules = computed<Record<keyof FormModel, App.Global.FormRule[]>>(() => {
 
 async function handleSubmit() {
   await validate();
-  await authStore.login(model.value.userName, model.value.password);
+  const encryptedPassword = encryptPassword(model.value.password);
+  await authStore.login(model.value.userName, encryptedPassword);
 }
 
 type AccountKey = 'super' | 'admin' | 'user';
@@ -68,7 +70,8 @@ const accounts = computed<Account[]>(() => [
 ]);
 
 async function handleAccountLogin(account: Account) {
-  await authStore.login(account.userName, account.password);
+  const encryptedPassword = encryptPassword(account.password);
+  await authStore.login(account.userName, encryptedPassword);
 }
 </script>
 
@@ -78,12 +81,8 @@ async function handleAccountLogin(account: Account) {
       <ElInput v-model="model.userName" :placeholder="$t('page.login.common.userNamePlaceholder')" />
     </ElFormItem>
     <ElFormItem prop="password">
-      <ElInput
-        v-model="model.password"
-        type="password"
-        show-password-on="click"
-        :placeholder="$t('page.login.common.passwordPlaceholder')"
-      />
+      <ElInput v-model="model.password" type="password" show-password-on="click"
+        :placeholder="$t('page.login.common.passwordPlaceholder')" />
     </ElFormItem>
     <ElSpace direction="vertical" :size="24" class="w-full" fill>
       <div class="flex-y-center justify-between">
@@ -103,7 +102,7 @@ async function handleAccountLogin(account: Account) {
           {{ $t(loginModuleRecord.register) }}
         </ElButton>
       </div>
-      <ElDivider class="text-14px text-#666 !m-0">{{ $t('page.login.pwdLogin.otherAccountLogin') }}</ElDivider>
+      <!-- <ElDivider class="text-14px text-#666 !m-0">{{ $t('page.login.pwdLogin.otherAccountLogin') }}</ElDivider>
       <div class="flex-center gap-12px">
         <ElButton
           v-for="item in accounts"
@@ -115,7 +114,7 @@ async function handleAccountLogin(account: Account) {
         >
           {{ item.label }}
         </ElButton>
-      </div>
+      </div> -->
     </ElSpace>
   </ElForm>
 </template>

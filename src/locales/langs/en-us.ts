@@ -173,15 +173,7 @@ const local: App.I18n.Schema = {
     'document_element-plus': 'Element Plus Document',
     'user-center': 'User Center',
     about: 'About',
-    function: 'System Function',
-    function_tab: 'Tab',
-    'function_multi-tab': 'Multi Tab',
-    'function_hide-child': 'Hide Child',
-    'function_hide-child_one': 'Hide Child',
-    'function_hide-child_two': 'Two',
-    'function_hide-child_three': 'Three',
-    'function_toggle-auth': 'Toggle Auth',
-    'function_super-page': 'Super Admin Visible',
+
     manage: 'System Manage',
     manage_user: 'User Manage',
     'manage_user-detail': 'User Detail',
@@ -220,7 +212,10 @@ const local: App.I18n.Schema = {
     plugin_gantt_vtable: 'VTableGantt',
     plugin_typeit: 'Typeit',
     plugin_tables: 'Tables',
-    plugin_tables_vtable: 'VTable'
+    plugin_tables_vtable: 'VTable',
+    document_alova: 'Alova Document',
+    'demo-route': 'Demo Route',
+    'demo-route_child': 'Demo Route Child'
   },
   page: {
     login: {

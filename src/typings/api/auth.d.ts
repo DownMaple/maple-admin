@@ -5,8 +5,20 @@ declare namespace Api {
    * backend api module: "auth"
    */
   namespace Auth {
+    /** 用户角色信息 */
+    interface UserRole {
+      roleId: string;
+      roleCode: string;
+      roleName: string;
+    }
+
+    /** 登录返回的 token 信息 */
     interface LoginToken {
-      token: string;
+      id: string;
+      username: string;
+      realName: string;
+      roles: UserRole[];
+      accessToken: string;
       refreshToken: string;
     }
 

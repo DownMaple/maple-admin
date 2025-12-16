@@ -1,4 +1,5 @@
 import CryptoJS from 'crypto-js';
+import JSEncrypt from 'jsencrypt';
 
 export class Crypto<T extends object> {
   /** Secret */
@@ -23,5 +24,24 @@ export class Crypto<T extends object> {
       // avoid parse error
       return null;
     }
+  }
+}
+
+export class RSACrypto {
+  private publicKey: string;
+  private encryptor: JSEncrypt;
+
+  constructor(publicKey: string) {
+    this.publicKey = publicKey;
+    this.encryptor = new JSEncrypt();
+    this.encryptor.setPublicKey(this.publicKey);
+  }
+
+  encrypt(data: string): string {
+    const encrypted = this.encryptor.encrypt(data);
+    if (!encrypted) {
+      throw new Error('RSA encryption failed');
+    }
+    return encrypted;
   }
 }

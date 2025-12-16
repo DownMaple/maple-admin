@@ -177,7 +177,7 @@ function handleAddChildMenu(item: Api.SystemManage.Menu) {
 const allPages = ref<string[]>([]);
 
 async function getAllPages() {
-  const { data: pages } = await fetchGetAllPages();
+  const pages = await fetchGetAllPages();
   allPages.value = pages || [];
 }
 

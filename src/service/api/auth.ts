@@ -1,18 +1,19 @@
 import { alova } from '../request';
+import { API_VERSION } from '../request/constants';
 
 /**
- * Login
+ * 用户登陆
  *
  * @param userName User name
  * @param password Password
  */
 export function fetchLogin(userName: string, password: string) {
-  return alova.Post<Api.Auth.LoginToken>('/auth/login', { userName, password });
+  return alova.Post<Api.Auth.LoginToken>(`${API_VERSION.V1}/auth/login`, { username: userName, password });
 }
 
 /** Get user info */
 export function fetchGetUserInfo() {
-  return alova.Get<Api.Auth.UserInfo>('/auth/getUserInfo');
+  return alova.Get<Api.Auth.UserInfo>(`${API_VERSION.V1}/auth/getUserInfo`);
 }
 
 /** Send captcha to target phone */

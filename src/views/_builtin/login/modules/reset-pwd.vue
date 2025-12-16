@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { useRouterPush } from '@/hooks/common/router';
 import { useForm, useFormRules } from '@/hooks/common/form';
 import { $t } from '@/locales';
+import { encryptPassword } from '@/utils/crypto';
 
 defineOptions({ name: 'ResetPwd' });
 
@@ -37,7 +38,8 @@ const rules = computed<RuleRecord>(() => {
 
 async function handleSubmit() {
   await validate();
-  // request to reset password
+  const encryptedPassword = encryptPassword(model.value.password);
+  // request to reset password with encryptedPassword
   window.$message?.success($t('page.login.common.validateSuccess'));
 }
 </script>

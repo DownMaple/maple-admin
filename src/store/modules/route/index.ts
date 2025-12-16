@@ -259,10 +259,11 @@ export const useRouteStore = defineStore(SetupStoreId.Route, () => {
   /**
    * Update root route redirect when auth route mode is dynamic
    *
-   * @param redirectKey Redirect route key
+   * @param redirectKey Redirect route key or path
    */
-  function handleUpdateRootRouteRedirect(redirectKey: LastLevelRouteKey) {
-    const redirect = getRoutePath(redirectKey);
+  function handleUpdateRootRouteRedirect(redirectKey: LastLevelRouteKey | string) {
+    // 优先从 routeMap 获取路径，如果没有则直接使用 redirectKey 作为路径
+    const redirect = getRoutePath(redirectKey as LastLevelRouteKey) || `/${redirectKey.replace(/_/g, '/')}`;
 
     if (redirect) {
       const rootRoute: CustomRoute = { ...ROOT_ROUTE, redirect };
