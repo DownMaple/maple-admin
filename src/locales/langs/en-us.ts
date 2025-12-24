@@ -242,7 +242,10 @@ const local: App.I18n.Schema = {
         otherLoginMode: 'Other Login Mode',
         superAdmin: 'Super Admin',
         admin: 'Admin',
-        user: 'User'
+        user: 'User',
+        sliderVerify: 'Slide to verify',
+        sliderVerifySuccess: 'Verified',
+        sliderVerifyTip: 'Please complete slider verification first'
       },
       codeLogin: {
         title: 'Verification Code Login',
@@ -455,7 +458,8 @@ const local: App.I18n.Schema = {
         addChildMenu: 'Add Child Menu',
         type: {
           directory: 'Directory',
-          menu: 'Menu'
+          menu: 'Menu',
+          button: 'Button'
         },
         iconType: {
           iconify: 'Iconify Icon',

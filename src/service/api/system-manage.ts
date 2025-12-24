@@ -1,4 +1,5 @@
 import { alova } from '../request';
+import {API_VERSION} from '@/service/request/constants';
 
 /** get role list */
 export function fetchGetRoleList(params?: Api.SystemManage.RoleSearchParams) {
@@ -45,12 +46,12 @@ export function batchDeleteUser(ids: number[]) {
 
 /** get menu list */
 export function fetchGetMenuList() {
-  return alova.Get<Api.SystemManage.MenuList>('/systemManage/getMenuList/v2');
+  return alova.Get<Api.SystemManage.MenuList>(`${API_VERSION.V1}/menu/tree`);
 }
 
 /** get all pages */
 export function fetchGetAllPages() {
-  return alova.Get<string[]>('/systemManage/getAllPages');
+  return alova.Get<string[]>(`${API_VERSION.V1}/menu/list`);
 }
 
 /** get menu tree */

@@ -441,6 +441,9 @@ declare namespace App {
             superAdmin: string;
             admin: string;
             user: string;
+            sliderVerify: string;
+            sliderVerifySuccess: string;
+            sliderVerifyTip: string;
           };
           codeLogin: {
             title: string;
@@ -653,6 +656,7 @@ declare namespace App {
             type: {
               directory: string;
               menu: string;
+              button: string;
             };
             iconType: {
               iconify: string;

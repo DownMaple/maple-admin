@@ -64,10 +64,11 @@ declare namespace Api {
     /**
      * menu type
      *
-     * - "1": directory
-     * - "2": menu
+     * - "catalog": 目录
+     * - "menu": 菜单
+     * - "button": 按钮
      */
-    type MenuType = '1' | '2';
+    type MenuType = 'catalog' | 'menu' | 'button';
 
     type MenuButton = {
       /**
@@ -104,30 +105,33 @@ declare namespace Api {
 
     type Menu = Common.CommonRecord<{
       /** parent menu id */
-      parentId: number;
+      parentId: string | null;
       /** menu type */
       menuType: MenuType;
       /** menu name */
-      menuName: string;
-      /** route name */
-      routeName: string;
+      name: string;
       /** route path */
-      routePath: string;
+      path: string | null;
       /** component */
-      component?: string;
+      component: string | null;
       /** iconify icon name or local icon name */
-      icon: string;
-      /** icon type */
-      iconType: IconType;
-      /** buttons */
-      buttons?: MenuButton[] | null;
+      icon: string | null;
+      /** permission */
+      permission: string | null;
+      /** sort order */
+      sort: number;
+      /** is show in menu */
+      isShow: boolean;
+      /** is cache */
+      isCache: boolean;
+      /** is external link */
+      isExternal: boolean;
       /** children menu */
       children?: Menu[] | null;
-    }> &
-      MenuPropsOfRoute;
+    }>;
 
     /** menu list */
-    type MenuList = Common.PaginatingQueryRecord<Menu>;
+    type MenuList = Menu[];
 
     type MenuTree = {
       id: number;

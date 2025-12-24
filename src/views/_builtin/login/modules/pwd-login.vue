@@ -6,12 +6,17 @@ import { useRouterPush } from '@/hooks/common/router';
 import { useForm, useFormRules } from '@/hooks/common/form';
 import { $t } from '@/locales';
 import { encryptPassword } from '@/utils/crypto';
+import SliderCaptcha from '@/components/common/slider-captcha.vue';
 
 defineOptions({ name: 'PwdLogin' });
 
 const authStore = useAuthStore();
 const { toggleLoginModule } = useRouterPush();
 const { formRef, validate } = useForm();
+
+// 滑动验证状态
+const isSliderVerified = ref(false);
+const sliderCaptchaRef = ref<InstanceType<typeof SliderCaptcha> | null>(null);
 
 interface FormModel {
   userName: string;
@@ -34,6 +39,11 @@ const rules = computed<Record<keyof FormModel, App.Global.FormRule[]>>(() => {
 });
 
 async function handleSubmit() {
+  // 检查滑动验证是否通过
+  if (!isSliderVerified.value) {
+    window.$message?.warning($t('page.login.pwdLogin.sliderVerifyTip'));
+    return;
+  }
   await validate();
   const encryptedPassword = encryptPassword(model.value.password);
   await authStore.login(model.value.userName, encryptedPassword);
@@ -83,6 +93,15 @@ async function handleAccountLogin(account: Account) {
     <ElFormItem prop="password">
       <ElInput v-model="model.password" type="password" show-password-on="click"
         :placeholder="$t('page.login.common.passwordPlaceholder')" />
+    </ElFormItem>
+    <!-- 滑动验证 -->
+    <ElFormItem>
+      <SliderCaptcha
+        ref="sliderCaptchaRef"
+        v-model:is-success="isSliderVerified"
+        :text="$t('page.login.pwdLogin.sliderVerify')"
+        :success-text="$t('page.login.pwdLogin.sliderVerifySuccess')"
+      />
     </ElFormItem>
     <ElSpace direction="vertical" :size="24" class="w-full" fill>
       <div class="flex-y-center justify-between">

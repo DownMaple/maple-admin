@@ -6,7 +6,7 @@ import { useBoolean } from '@sa/hooks';
 import { yesOrNoRecord } from '@/constants/common';
 import { enableStatusRecord, menuTypeRecord } from '@/constants/business';
 import { fetchGetAllPages, fetchGetMenuList } from '@/service/api';
-import { defaultTransform, useTableOperate, useUIPaginatedTable } from '@/hooks/common/table';
+import { useTableOperate, useUITable } from '@/hooks/common/table';
 import { $t } from '@/locales';
 import SvgIcon from '@/components/custom/svg-icon.vue';
 import MenuOperateModal, { type OperateType } from './modules/menu-operate-modal.vue';
@@ -15,20 +15,25 @@ const { bool: visible, setTrue: openModal } = useBoolean();
 
 const wrapperRef = ref<HTMLElement | null>(null);
 
-const { columns, columnChecks, data, loading, pagination, getData, getDataByPage } = useUIPaginatedTable({
+const { columns, columnChecks, data, loading, getData } = useUITable<Api.SystemManage.MenuList, Api.SystemManage.Menu>({
   api: () => fetchGetMenuList(),
-  transform: response => defaultTransform(response),
+  transform: response => response ?? [],
   columns: () => [
     { prop: 'selection', type: 'selection', width: 48 },
-    { prop: 'id', label: $t('page.manage.menu.id') },
+    {
+      prop: 'name',
+      label: $t('page.manage.menu.menuName'),
+      minWidth: 120
+    },
     {
       prop: 'menuType',
       label: $t('page.manage.menu.menuType'),
       width: 90,
       formatter: row => {
         const tagMap: Record<Api.SystemManage.MenuType, UI.ThemeColor> = {
-          1: 'info',
-          2: 'primary'
+          catalog: 'info',
+          menu: 'primary',
+          button: 'warning'
         };
 
         const label = $t(menuTypeRecord[row.menuType]);
@@ -37,35 +42,19 @@ const { columns, columnChecks, data, loading, pagination, getData, getDataByPage
       }
     },
     {
-      prop: 'menuName',
-      label: $t('page.manage.menu.menuName'),
-      minWidth: 120,
-      formatter: row => {
-        const { i18nKey, menuName } = row;
-
-        const label = i18nKey ? $t(i18nKey) : menuName;
-
-        return <span>{label}</span>;
-      }
-    },
-    {
       prop: 'icon',
       label: $t('page.manage.menu.icon'),
       width: 100,
       formatter: row => {
-        const icon = row.iconType === '1' ? row.icon : undefined;
-
-        const localIcon = row.iconType === '2' ? row.icon : undefined;
-
         return (
           <div class="flex-center">
-            <SvgIcon icon={icon} localIcon={localIcon} class="text-icon" />
+            <SvgIcon icon={row.icon || ''} class="text-icon" />
           </div>
         );
       }
     },
-    { prop: 'routeName', label: $t('page.manage.menu.routeName'), minWidth: 120 },
-    { prop: 'routePath', label: $t('page.manage.menu.routePath'), minWidth: 120 },
+    { prop: 'path', label: $t('page.manage.menu.routePath'), minWidth: 120 },
+    { prop: 'component', label: $t('page.manage.menu.page'), minWidth: 120 },
     {
       prop: 'status',
       label: $t('page.manage.menu.menuStatus'),
@@ -86,11 +75,11 @@ const { columns, columnChecks, data, loading, pagination, getData, getDataByPage
       }
     },
     {
-      prop: 'hideInMenu',
+      prop: 'isShow',
       label: $t('page.manage.menu.hideInMenu'),
       width: 80,
       formatter: row => {
-        const hide: CommonType.YesOrNo = row.hideInMenu ? 'Y' : 'N';
+        const hide: CommonType.YesOrNo = row.isShow ? 'N' : 'Y';
 
         const tagMap: Record<CommonType.YesOrNo, UI.ThemeColor> = {
           Y: 'danger',
@@ -102,15 +91,14 @@ const { columns, columnChecks, data, loading, pagination, getData, getDataByPage
         return <ElTag type={tagMap[hide]}>{label}</ElTag>;
       }
     },
-    { prop: 'parentId', label: $t('page.manage.menu.parentId'), width: 90 },
-    { prop: 'order', label: $t('page.manage.menu.order'), width: 60 },
+    { prop: 'sort', label: $t('page.manage.menu.order'), width: 60 },
     {
       prop: 'operate',
       label: $t('common.operate'),
       width: 270,
       formatter: row => (
-        <div class="flex-center justify-end pr-10px">
-          {row.menuType === '1' && (
+        <div class="flex-center justify-center pr-10px">
+          {row.menuType === 'catalog' && (
             <ElButton type="primary" plain size="small" onClick={() => handleAddChildMenu(row)}>
               {$t('page.manage.menu.addChildMenu')}
             </ElButton>
@@ -215,24 +203,15 @@ init();
           row-key="id"
           @selection-change="checkedRowKeys = $event"
         >
-          <ElTableColumn v-for="col in columns" :key="col.prop" v-bind="col" />
+          <ElTableColumn v-for="col in columns" :key="col.prop" v-bind="col"  />
         </ElTable>
-        <div class="mt-20px flex justify-end">
-          <ElPagination
-            v-if="pagination.total"
-            layout="total,prev,pager,next,sizes"
-            v-bind="pagination"
-            @current-change="pagination['current-change']"
-            @size-change="pagination['size-change']"
-          />
-        </div>
       </div>
       <MenuOperateModal
         v-model:visible="visible"
         :operate-type="operateType"
         :row-data="editingData"
         :all-pages="allPages"
-        @submitted="getDataByPage"
+        @submitted="getData"
       />
     </ElCard>
   </div>

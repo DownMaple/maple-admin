@@ -241,7 +241,10 @@ const local: App.I18n.Schema = {
         otherLoginMode: '其他登录方式',
         superAdmin: '超级管理员',
         admin: '管理员',
-        user: '普通用户'
+        user: '普通用户',
+        sliderVerify: '请向右滑动验证',
+        sliderVerifySuccess: '验证通过',
+        sliderVerifyTip: '请先完成滑动验证'
       },
       codeLogin: {
         title: '验证码登录',
@@ -454,7 +457,8 @@ const local: App.I18n.Schema = {
         addChildMenu: '新增子菜单',
         type: {
           directory: '目录',
-          menu: '菜单'
+          menu: '菜单',
+          button: '按钮'
         },
         iconType: {
           iconify: 'iconify图标',
