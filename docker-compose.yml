@@ -1,0 +1,57 @@
+# Docker Compose 配置
+# 使用: docker-compose up -d
+
+version: '3.8'
+
+services:
+  # 前端服务
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        BUILD_MODE: prod  # 可选: prod, test
+    container_name: maple-admin-web
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    networks:
+      - maple-network
+    # 如果需要连接后端服务，取消下面的注释
+    # depends_on:
+    #   - backend
+
+  # 后端服务示例（根据实际情况配置）
+  # backend:
+  #   image: your-backend-image:latest
+  #   container_name: maple-admin-backend
+  #   restart: unless-stopped
+  #   ports:
+  #     - "8080:8080"
+  #   environment:
+  #     - DATABASE_URL=postgresql://user:pass@db:5432/maple
+  #   networks:
+  #     - maple-network
+  #   depends_on:
+  #     - db
+
+  # 数据库示例
+  # db:
+  #   image: postgres:15-alpine
+  #   container_name: maple-admin-db
+  #   restart: unless-stopped
+  #   environment:
+  #     POSTGRES_USER: user
+  #     POSTGRES_PASSWORD: pass
+  #     POSTGRES_DB: maple
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   networks:
+  #     - maple-network
+
+networks:
+  maple-network:
+    driver: bridge
+
+# volumes:
+#   postgres_data:
