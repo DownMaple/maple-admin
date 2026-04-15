@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { enableStatusOptions, userGenderOptions } from '@/constants/business';
 import { useForm, useFormRules } from '@/hooks/common/form';
 import { translateOptions } from '@/utils/common';
 import { $t } from '@/locales';
 
 defineOptions({ name: 'UserSearch' });
+
+const activeName = ref(['user-search']);
 
 interface Emits {
   (e: 'reset'): void;
@@ -21,7 +23,7 @@ const model = defineModel<Api.SystemManage.UserSearchParams>('model', { required
 type RuleKey = Extract<keyof Api.SystemManage.UserSearchParams, 'userEmail' | 'userPhone'>;
 
 const rules = computed<Record<RuleKey, App.Global.FormRule>>(() => {
-  const { patternRules } = useFormRules(); // inside computed to make locale reactive
+  const { patternRules } = useFormRules();
 
   return {
     userEmail: patternRules.email,
@@ -42,7 +44,7 @@ async function search() {
 
 <template>
   <ElCard class="card-wrapper">
-    <ElCollapse>
+    <ElCollapse v-model="activeName">
       <ElCollapseItem :title="$t('common.search')" name="user-search">
         <ElForm ref="formRef" :model="model" :rules="rules" label-position="right" :label-width="80">
           <ElRow :gutter="24">
@@ -51,7 +53,7 @@ async function search() {
                 <ElInput v-model="model.userName" :placeholder="$t('page.manage.user.form.userName')" />
               </ElFormItem>
             </ElCol>
-            <ElCol :lg="6" :md="8" :sm="12" :label="$t('page.manage.user.userGender')">
+            <ElCol :lg="6" :md="8" :sm="12">
               <ElFormItem :label="$t('page.manage.user.userGender')" prop="userGender">
                 <ElSelect v-model="model.userGender" clearable :placeholder="$t('page.manage.user.form.userGender')">
                   <ElOption
@@ -59,7 +61,7 @@ async function search() {
                     :key="idx"
                     :label="item.label"
                     :value="item.value"
-                  ></ElOption>
+                  />
                 </ElSelect>
               </ElFormItem>
             </ElCol>
@@ -79,14 +81,14 @@ async function search() {
               </ElFormItem>
             </ElCol>
             <ElCol :lg="6" :md="8" :sm="12">
-              <ElFormItem :label="$t('page.manage.user.userStatus')" prop="userStatus">
-                <ElSelect v-model="model.userGender" clearable :placeholder="$t('page.manage.user.form.userStatus')">
+              <ElFormItem :label="$t('page.manage.user.userStatus')" prop="status">
+                <ElSelect v-model="model.status" clearable :placeholder="$t('page.manage.user.form.userStatus')">
                   <ElOption
                     v-for="{ label, value } in translateOptions(enableStatusOptions)"
                     :key="value"
                     :label="label"
                     :value="value"
-                  ></ElOption>
+                  />
                 </ElSelect>
               </ElFormItem>
             </ElCol>
@@ -112,5 +114,3 @@ async function search() {
     </ElCollapse>
   </ElCard>
 </template>
-
-<style scoped></style>

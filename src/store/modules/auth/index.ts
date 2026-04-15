@@ -25,7 +25,10 @@ export const useAuthStore = defineStore(SetupStoreId.Auth, () => {
     userId: '',
     userName: '',
     roles: [],
-    buttons: []
+    buttons: [],
+    currentRoleId: '',
+    currentRoleCode: '',
+    roleOptions: []
   });
 
   /** is super role in static route */
@@ -119,7 +122,7 @@ export const useAuthStore = defineStore(SetupStoreId.Auth, () => {
         });
       }
     } catch (error) {
-      resetStore();
+      await resetStore();
     }
 
     endLoading();
@@ -153,16 +156,25 @@ export const useAuthStore = defineStore(SetupStoreId.Auth, () => {
     }
   }
 
-  async function initUserInfo() {
+  async function initUserInfo(force = false) {
     const hasToken = getToken();
 
-    if (hasToken) {
-      const pass = await getUserInfo();
-
-      if (!pass) {
-        resetStore();
-      }
+    if (!hasToken) {
+      return false;
     }
+
+    if (!force && userInfo.userId && userInfo.currentRoleId) {
+      return true;
+    }
+
+    const pass = await getUserInfo();
+
+    if (!pass) {
+      await resetStore();
+      return false;
+    }
+
+    return true;
   }
 
   return {

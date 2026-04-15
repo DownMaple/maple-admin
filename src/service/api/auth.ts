@@ -11,9 +11,33 @@ export function fetchLogin(userName: string, password: string) {
   return alova.Post<Api.Auth.LoginToken>(`${API_VERSION.V1}/auth/login`, { username: userName, password });
 }
 
+function normalizeUserInfo(
+  info: Api.Auth.UserInfoRaw,
+  buttons: string[]
+): Api.Auth.UserInfo {
+  return {
+    userId: info.id,
+    userName: info.userName,
+    roles: info.roles.map(item => item.roleCode),
+    buttons: Array.from(new Set(buttons.filter(Boolean))),
+    currentRoleId: info.currentRoleId,
+    currentRoleCode: info.currentRoleCode,
+    roleOptions: info.roles
+  };
+}
+
+function fetchGetUserInfoRaw() {
+  return alova.Get<Api.Auth.UserInfoRaw>(`${API_VERSION.V1}/auth/getUserInfo`);
+}
+
+export function fetchGetUserPermissions() {
+  return alova.Get<string[]>(`${API_VERSION.V1}/menu/permissions`);
+}
+
 /** Get user info */
-export function fetchGetUserInfo() {
-  return alova.Get<Api.Auth.UserInfo>(`${API_VERSION.V1}/auth/getUserInfo`);
+export async function fetchGetUserInfo() {
+  const [info, buttons] = await Promise.all([fetchGetUserInfoRaw(), fetchGetUserPermissions()]);
+  return normalizeUserInfo(info, buttons ?? []);
 }
 
 /** Send captcha to target phone */

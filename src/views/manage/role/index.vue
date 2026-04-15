@@ -1,14 +1,35 @@
 <script setup lang="tsx">
-import { reactive } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import { ElButton, ElPopconfirm, ElTag } from 'element-plus';
 import { enableStatusRecord } from '@/constants/business';
-import { fetchGetRoleList } from '@/service/api';
+import { batchDeleteRole, deleteRole, fetchGetRoleList } from '@/service/api';
+import { useAuth } from '@/hooks/business/auth';
 import { defaultTransform, useTableOperate, useUIPaginatedTable } from '@/hooks/common/table';
 import { $t } from '@/locales';
+import ButtonAuthModal from './modules/button-auth-modal.vue';
+import MenuAuthModal from './modules/menu-auth-modal.vue';
 import RoleOperateDrawer from './modules/role-operate-drawer.vue';
 import RoleSearch from './modules/role-search.vue';
 
+defineOptions({ name: 'RoleManage' });
+
+const SUPER_ADMIN_ROLE_ID = 'a0000000-0000-0000-0000-000000000001';
+const SUPER_ADMIN_ROLE_CODE = 'superAdmin';
+
 const searchParams = reactive(getInitSearchParams());
+const menuAuthVisible = ref(false);
+const buttonAuthVisible = ref(false);
+const permissionRole = ref<Api.SystemManage.Role | null>(null);
+const { hasAuth } = useAuth();
+const canAddRole = computed(() => hasAuth('system:role:add'));
+const canEditRole = computed(() => hasAuth('system:role:edit'));
+const canDeleteRole = computed(() => hasAuth('system:role:delete'));
+const canMenuAuthRole = computed(() => hasAuth('system:role:menu'));
+const canButtonAuthRole = computed(() => hasAuth('system:role:button'));
+
+function isProtectedRole(row: Api.SystemManage.Role) {
+  return row.id === SUPER_ADMIN_ROLE_ID || row.roleCode === SUPER_ADMIN_ROLE_CODE;
+}
 
 function getInitSearchParams(): Api.SystemManage.RoleSearchParams {
   return {
@@ -20,7 +41,7 @@ function getInitSearchParams(): Api.SystemManage.RoleSearchParams {
   };
 }
 
-const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagination } = useUIPaginatedTable({
+const { columns, columnChecks, data, loading, getData, getDataByPage, pagination, mobilePagination } = useUIPaginatedTable({
   paginationProps: {
     currentPage: searchParams.current,
     pageSize: searchParams.size
@@ -32,7 +53,7 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
     searchParams.size = params.pageSize;
   },
   columns: () => [
-    { prop: 'selection', type: 'selection', width: 48 },
+    { prop: 'selection', type: 'selection', width: 48, selectable: row => canDeleteRole.value && !isProtectedRole(row) },
     { prop: 'index', type: 'index', label: $t('common.index'), width: 64 },
     { prop: 'roleName', label: $t('page.manage.role.roleName'), minWidth: 120 },
     { prop: 'roleCode', label: $t('page.manage.role.roleCode'), minWidth: 120 },
@@ -57,77 +78,145 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, mobilePagi
       }
     },
     {
+      prop: 'permission',
+      label: $t('page.manage.role.permissionConfig'),
+      width: 220,
+      formatter: row => {
+        const protectedRole = isProtectedRole(row);
+
+        return (
+          <div class="flex-center justify-center gap-8px">
+            <ElButton
+              type="primary"
+              plain
+              size="small"
+              disabled={protectedRole || !canMenuAuthRole.value}
+              onClick={() => !protectedRole && canMenuAuthRole.value && openMenuAuth(row)}
+            >
+              {$t('page.manage.role.menuAuth')}
+            </ElButton>
+            <ElButton
+              type="warning"
+              plain
+              size="small"
+              disabled={protectedRole || !canButtonAuthRole.value}
+              onClick={() => !protectedRole && canButtonAuthRole.value && openButtonAuth(row)}
+            >
+              {$t('page.manage.role.buttonAuth')}
+            </ElButton>
+          </div>
+        );
+      }
+    },
+    {
       prop: 'operate',
       label: $t('common.operate'),
-      width: 130,
-      formatter: row => (
-        <div class="flex-center">
-          <ElButton type="primary" plain size="small" onClick={() => edit(row.id)}>
-            {$t('common.edit')}
-          </ElButton>
-          <ElPopconfirm title={$t('common.confirmDelete')} onConfirm={() => handleDelete(row.id)}>
-            {{
-              reference: () => (
-                <ElButton type="danger" plain size="small">
-                  {$t('common.delete')}
-                </ElButton>
-              )
-            }}
-          </ElPopconfirm>
-        </div>
-      )
+      width: 170,
+      formatter: row => {
+        const protectedRole = isProtectedRole(row);
+
+        return (
+          <div class="flex-center gap-8px">
+            <ElButton
+              type="primary"
+              plain
+              size="small"
+              disabled={protectedRole || !canEditRole.value}
+              onClick={() => !protectedRole && canEditRole.value && edit(row.id)}
+            >
+              {$t('common.edit')}
+            </ElButton>
+            {protectedRole || !canDeleteRole.value ? (
+              <ElButton type="danger" plain size="small" disabled>
+                {$t('common.delete')}
+              </ElButton>
+            ) : (
+              <ElPopconfirm title={$t('common.confirmDelete')} onConfirm={() => handleDelete(row.id)}>
+                {{
+                  reference: () => (
+                    <ElButton type="danger" plain size="small">
+                      {$t('common.delete')}
+                    </ElButton>
+                  )
+                }}
+              </ElPopconfirm>
+            )}
+          </div>
+        );
+      }
     }
   ]
 });
 
-const {
-  drawerVisible,
-  operateType,
-  editingData,
-  handleAdd,
-  handleEdit,
-  checkedRowKeys,
-  onBatchDeleted,
-  onDeleted
-  // closeDrawer
-} = useTableOperate(data, 'id', getData);
+const { drawerVisible, operateType, editingData, handleAdd, handleEdit, checkedRowKeys, onBatchDeleted, onDeleted } =
+  useTableOperate(data, 'id', getData);
 
 async function handleBatchDelete() {
-  // eslint-disable-next-line no-console
-  console.log(checkedRowKeys.value);
-  // request
+  if (!checkedRowKeys.value.length) {
+    return;
+  }
 
-  onBatchDeleted();
+  await batchDeleteRole(checkedRowKeys.value);
+  await onBatchDeleted();
 }
 
-function handleDelete(id: number) {
-  // request
-
-  // eslint-disable-next-line no-console
-  console.log(id);
-
-  onDeleted();
+async function handleDelete(id: string) {
+  await deleteRole(id);
+  await onDeleted();
 }
 
 function resetSearchParams() {
   Object.assign(searchParams, getInitSearchParams());
+  void getDataByPage(1);
 }
 
-function edit(id: number) {
+function updateSearchParams(params: Api.SystemManage.RoleSearchParams) {
+  Object.assign(searchParams, params);
+}
+
+function edit(id: string) {
   handleEdit(id);
+}
+
+function handleSelectionChange(rows: Api.SystemManage.Role[]) {
+  checkedRowKeys.value = rows.map(item => item.id);
+}
+
+function openMenuAuth(role: Api.SystemManage.Role) {
+  permissionRole.value = role;
+  menuAuthVisible.value = true;
+}
+
+function openButtonAuth(role: Api.SystemManage.Role) {
+  permissionRole.value = role;
+  buttonAuthVisible.value = true;
+}
+
+function handlePermissionModalClose() {
+  permissionRole.value = null;
+}
+
+async function handleSubmitted(operateType: UI.TableOperateType) {
+  if (operateType === 'add' && pagination.currentPage !== 1) {
+    pagination.currentPage = 1;
+    return;
+  }
+
+  await getData();
 }
 </script>
 
 <template>
   <div class="min-h-500px flex-col-stretch gap-16px overflow-hidden lt-sm:overflow-auto">
-    <RoleSearch v-model:model="searchParams" @reset="resetSearchParams" @search="getDataByPage" />
+    <RoleSearch :model="searchParams" @update:model="updateSearchParams" @reset="resetSearchParams" @search="getDataByPage" />
     <ElCard class="card-wrapper sm:flex-1-hidden" body-class="ht50">
       <template #header>
         <div class="flex items-center justify-between">
           <p>{{ $t('page.manage.role.title') }}</p>
           <TableHeaderOperation
             v-model:columns="columnChecks"
-            :disabled-delete="checkedRowKeys.length === 0"
+            :disabled-add="!canAddRole"
+            :disabled-delete="checkedRowKeys.length === 0 || !canDeleteRole"
             :loading="loading"
             @add="handleAdd"
             @delete="handleBatchDelete"
@@ -143,7 +232,7 @@ function edit(id: number) {
           class="sm:h-full"
           :data="data"
           row-key="id"
-          @selection-change="checkedRowKeys = $event"
+          @selection-change="handleSelectionChange"
         >
           <ElTableColumn v-for="col in columns" :key="col.prop" v-bind="col" />
         </ElTable>
@@ -161,7 +250,19 @@ function edit(id: number) {
         v-model:visible="drawerVisible"
         :operate-type="operateType"
         :row-data="editingData"
-        @submitted="getDataByPage"
+        @submitted="handleSubmitted"
+      />
+      <MenuAuthModal
+        v-model:visible="menuAuthVisible"
+        :role-id="permissionRole?.id ?? ''"
+        :role-name="permissionRole?.roleName ?? ''"
+        @closed="handlePermissionModalClose"
+      />
+      <ButtonAuthModal
+        v-model:visible="buttonAuthVisible"
+        :role-id="permissionRole?.id ?? ''"
+        :role-name="permissionRole?.roleName ?? ''"
+        @closed="handlePermissionModalClose"
       />
     </ElCard>
   </div>

@@ -22,11 +22,27 @@ declare namespace Api {
       refreshToken: string;
     }
 
+    interface UserInfoRaw {
+      id: string;
+      userName: string;
+      realName: string;
+      email?: string | null;
+      phone?: string | null;
+      avatar?: string | null;
+      status: number;
+      roles: UserRole[];
+      currentRoleId: string;
+      currentRoleCode: string;
+    }
+
     interface UserInfo {
       userId: string;
       userName: string;
       roles: string[];
       buttons: string[];
+      currentRoleId: string;
+      currentRoleCode: string;
+      roleOptions: UserRole[];
     }
   }
 }

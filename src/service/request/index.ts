@@ -22,7 +22,7 @@ const mockAdapter = createAlovaMockAdapter([featureUsers20241014], {
   delay: 1000,
 
   // global mock toggle
-  enable: true,
+  enable: import.meta.env.DEV && import.meta.env.VITE_SERVICE_MOCK === 'Y',
   matchMode: 'methodurl'
 });
 export const alova = createAlovaRequest(
@@ -63,7 +63,7 @@ export const alova = createAlovaRequest(
       let responseCode = '';
       if (response) {
         const data = await response?.clone().json();
-        message = data.msg;
+        message = data.message || data.msg || message;
         responseCode = String(data.code);
       }
 

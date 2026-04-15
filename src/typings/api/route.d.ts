@@ -28,6 +28,9 @@ declare namespace Api {
       component: string | null;
       icon: string;
       sort: number;
+      isShow: boolean;
+      isCache: boolean;
+      isExternal: boolean;
       children?: BackendMenu[];
     }
   }

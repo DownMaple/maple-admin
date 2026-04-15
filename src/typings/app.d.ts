@@ -558,6 +558,16 @@ declare namespace App {
             roleCode: string;
             roleStatus: string;
             roleDesc: string;
+            permissionConfig: string;
+            checkStrictly: string;
+            expandAll: string;
+            collapseAll: string;
+            selectAll: string;
+            clearSelected: string;
+            selectedCount: string;
+            totalCount: string;
+            menuAuthTip: string;
+            buttonAuthTip: string;
             form: {
               roleName: string;
               roleCode: string;
@@ -576,6 +586,7 @@ declare namespace App {
             nickName: string;
             userPhone: string;
             userEmail: string;
+            password: string;
             userStatus: string;
             userRole: string;
             form: {
@@ -584,6 +595,7 @@ declare namespace App {
               nickName: string;
               userPhone: string;
               userEmail: string;
+              password: string;
               userStatus: string;
               userRole: string;
             };
@@ -599,6 +611,8 @@ declare namespace App {
             title: string;
             id: string;
             parentId: string;
+            parentName: string;
+            parentMenu: string;
             menuType: string;
             menuName: string;
             routeName: string;
@@ -615,6 +629,8 @@ declare namespace App {
             keepAlive: string;
             href: string;
             hideInMenu: string;
+            showInMenu: string;
+            externalLink: string;
             activeMenu: string;
             multiTab: string;
             fixedIndexInTab: string;
@@ -622,9 +638,11 @@ declare namespace App {
             button: string;
             buttonCode: string;
             buttonDesc: string;
+            permission: string;
             menuStatus: string;
             form: {
               home: string;
+              parentMenu: string;
               menuType: string;
               menuName: string;
               routeName: string;
@@ -639,6 +657,8 @@ declare namespace App {
               keepAlive: string;
               href: string;
               hideInMenu: string;
+              showInMenu: string;
+              externalLink: string;
               activeMenu: string;
               multiTab: string;
               fixedInTab: string;
@@ -648,6 +668,7 @@ declare namespace App {
               button: string;
               buttonCode: string;
               buttonDesc: string;
+              permission: string;
               menuStatus: string;
             };
             addMenu: string;

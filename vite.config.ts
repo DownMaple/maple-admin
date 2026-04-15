@@ -10,13 +10,16 @@ export default defineConfig(configEnv => {
   const buildTime = getBuildTime();
 
   const enableProxy = configEnv.command === 'serve' && !configEnv.isPreview;
+  const enableDevtools = configEnv.command === 'build' && viteEnv.VITE_ENABLE_DEVTOOLS === 'Y';
 
   return {
     base: viteEnv.VITE_BASE_URL,
+    devtools: enableDevtools,
     resolve: {
       alias: {
         '~': fileURLToPath(new URL('./', import.meta.url)),
-        '@': fileURLToPath(new URL('./src', import.meta.url))
+        '@': fileURLToPath(new URL('./src', import.meta.url)),
+        roughjs: 'roughjs/bundled/rough.esm.js'
       }
     },
     css: {
@@ -41,6 +44,7 @@ export default defineConfig(configEnv => {
       port: 9725
     },
     build: {
+      target: ['chrome107', 'edge107', 'firefox104', 'safari16'],
       reportCompressedSize: false,
       sourcemap: viteEnv.VITE_SOURCE_MAP === 'Y',
       commonjsOptions: {

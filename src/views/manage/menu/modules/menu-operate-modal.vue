@@ -1,10 +1,7 @@
 <script setup lang="ts">
-/**
- * 菜单操作弹窗
- * 根据接口字段重写
- */
 import { computed, ref, watch } from 'vue';
-import { menuTypeOptions } from '@/constants/business';
+import { addMenu, updateMenu } from '@/service/api';
+import { enableStatusOptions, menuTypeOptions } from '@/constants/business';
 import { useForm, useFormRules } from '@/hooks/common/form';
 import { $t } from '@/locales';
 import SvgIcon from '@/components/custom/svg-icon.vue';
@@ -14,12 +11,10 @@ defineOptions({ name: 'MenuOperateModal' });
 export type OperateType = UI.TableOperateType | 'addChild';
 
 interface Props {
-  /** 操作类型 */
   operateType: OperateType;
-  /** 编辑的菜单数据或添加子菜单时的父菜单数据 */
   rowData?: Api.SystemManage.Menu | null;
-  /** 所有页面 */
   allPages: string[];
+  menuTree: Api.SystemManage.Menu[];
 }
 
 const props = defineProps<Props>();
@@ -44,7 +39,6 @@ const title = computed(() => {
   return titles[props.operateType];
 });
 
-/** 表单模型，匹配 Menu 类型 */
 type Model = {
   menuType: Api.SystemManage.MenuType;
   name: string;
@@ -56,6 +50,7 @@ type Model = {
   isShow: boolean;
   isCache: boolean;
   isExternal: boolean;
+  status: Api.Common.EnableStatus;
   parentId: string | null;
 };
 
@@ -73,55 +68,142 @@ function createDefaultModel(): Model {
     isShow: true,
     isCache: false,
     isExternal: false,
+    status: '1',
     parentId: null
   };
 }
 
-type RuleKey = Extract<keyof Model, 'name' | 'path'>;
+type RuleKey = 'name' | 'path' | 'component' | 'permission';
 
-const rules: Record<RuleKey, App.Global.FormRule> = {
-  name: defaultRequiredRule,
-  path: defaultRequiredRule
-};
+const rules = computed<Record<RuleKey, App.Global.FormRule[]>>(() => ({
+  name: [defaultRequiredRule],
+  path: [
+    {
+      validator: (_rule, value, callback) => {
+        if (showPath.value && !value?.trim?.()) {
+          callback(new Error($t('page.manage.menu.form.routePath')));
+          return;
+        }
+        callback();
+      },
+      trigger: 'blur'
+    }
+  ],
+  component: [
+    {
+      validator: (_rule, value, callback) => {
+        if (showComponent.value && !value?.trim?.()) {
+          callback(new Error($t('page.manage.menu.form.page')));
+          return;
+        }
+        callback();
+      },
+      trigger: 'change'
+    }
+  ],
+  permission: [
+    {
+      validator: (_rule, value, callback) => {
+        if (showPermission.value && !value?.trim?.()) {
+          callback(new Error($t('page.manage.menu.form.permission')));
+          return;
+        }
+        callback();
+      },
+      trigger: 'blur'
+    }
+  ]
+}));
 
 const disabledMenuType = computed(() => props.operateType === 'edit');
-
-/** 是否显示组件选择（仅菜单类型显示） */
 const showComponent = computed(() => model.value.menuType === 'menu');
-
-/** 是否显示路径输入（目录和菜单显示，按钮不显示） */
 const showPath = computed(() => model.value.menuType !== 'button');
-
-/** 是否显示权限输入（菜单和按钮显示） */
 const showPermission = computed(() => model.value.menuType !== 'catalog');
+const showStatus = computed(() => props.operateType === 'edit');
 
-const pageOptions = computed(() => {
-  return props.allPages.map(page => ({
+const pageOptions = computed(() =>
+  props.allPages.map(page => ({
     label: page,
     value: page
-  }));
+  }))
+);
+const parentMenuOptions = computed(() => {
+  const excludedIds = new Set<string>();
+
+  if (props.operateType === 'edit' && props.rowData) {
+    collectExcludedIds(props.menuTree, props.rowData.id, excludedIds);
+  }
+
+  return filterParentMenuTree(props.menuTree, excludedIds);
 });
 
 function handleInitModel() {
   model.value = createDefaultModel();
 
-  if (!props.rowData) return;
+  if (!props.rowData) {
+    return;
+  }
 
   if (props.operateType === 'addChild') {
-    const { id } = props.rowData;
-    model.value.parentId = String(id);
+    model.value.parentId = props.rowData.id;
+    model.value.menuType = 'menu';
+    return;
   }
 
   if (props.operateType === 'edit') {
-    const { id, createBy, createTime, updateBy, updateTime, children, status, ...rest } = props.rowData;
     Object.assign(model.value, {
-      ...rest,
-      path: rest.path ?? '',
-      component: rest.component ?? '',
-      icon: rest.icon ?? '',
-      permission: rest.permission ?? ''
+      menuType: props.rowData.menuType,
+      name: props.rowData.name,
+      path: props.rowData.path ?? '',
+      component: props.rowData.component ?? '',
+      icon: props.rowData.icon ?? '',
+      permission: props.rowData.permission ?? '',
+      sort: props.rowData.sort,
+      isShow: props.rowData.isShow,
+      isCache: props.rowData.isCache,
+      isExternal: props.rowData.isExternal,
+      status: String(props.rowData.status) as Api.Common.EnableStatus,
+      parentId: props.rowData.parentId
     });
   }
+}
+
+function normalizeNullable(value: string) {
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
+function collectExcludedIds(nodes: Api.SystemManage.Menu[], targetId: string, result: Set<string>) {
+  nodes.forEach(node => {
+    if (node.id === targetId) {
+      collectNodeIds(node, result);
+      return;
+    }
+
+    if (node.children?.length) {
+      collectExcludedIds(node.children, targetId, result);
+    }
+  });
+}
+
+function collectNodeIds(node: Api.SystemManage.Menu, result: Set<string>) {
+  result.add(node.id);
+  node.children?.forEach(child => collectNodeIds(child, result));
+}
+
+function filterParentMenuTree(nodes: Api.SystemManage.Menu[], excludedIds: Set<string>): Api.SystemManage.Menu[] {
+  return nodes.reduce<Api.SystemManage.Menu[]>((result, node) => {
+    if (excludedIds.has(node.id) || node.menuType === 'button') {
+      return result;
+    }
+
+    const children = node.children ? filterParentMenuTree(node.children, excludedIds) : [];
+    result.push({
+      ...node,
+      children: children.length ? children : null
+    });
+    return result;
+  }, []);
 }
 
 function closeDrawer() {
@@ -131,26 +213,41 @@ function closeDrawer() {
 async function handleSubmit() {
   await validate();
 
-  // 构建提交参数
-  const params = {
-    ...model.value,
-    path: model.value.path || null,
-    component: model.value.component || null,
-    icon: model.value.icon || null,
-    permission: model.value.permission || null
+  const payload = {
+    parentId: model.value.parentId,
+    name: model.value.name.trim(),
+    menuType: model.value.menuType,
+    path: showPath.value ? normalizeNullable(model.value.path) : null,
+    component: showComponent.value ? normalizeNullable(model.value.component) : null,
+    icon: showPath.value ? normalizeNullable(model.value.icon) : null,
+    permission: showPermission.value ? normalizeNullable(model.value.permission) : null,
+    sort: model.value.sort,
+    isShow: model.value.isShow,
+    isCache: showComponent.value ? model.value.isCache : false,
+    isExternal: showPath.value ? model.value.isExternal : false
   };
 
-  // eslint-disable-next-line no-console
-  console.log('submit params:', params);
+  try {
+    if (props.operateType === 'edit' && props.rowData?.id) {
+      await updateMenu(props.rowData.id, {
+        ...payload,
+        status: Number(model.value.status)
+      });
+      window.$message?.success($t('common.updateSuccess'));
+    } else {
+      await addMenu(payload);
+      window.$message?.success($t('common.addSuccess'));
+    }
 
-  // TODO: 调用后端接口
-  window.$message?.success($t('common.updateSuccess'));
-  closeDrawer();
-  emit('submitted');
+    closeDrawer();
+    emit('submitted');
+  } catch {
+    // error is already handled by alova
+  }
 }
 
-watch(visible, () => {
-  if (visible.value) {
+watch(visible, value => {
+  if (value) {
     handleInitModel();
     restoreValidation();
   }
@@ -161,7 +258,20 @@ watch(visible, () => {
   <ElDialog v-model="visible" :title="title" width="600px">
     <ElForm ref="formRef" :model="model" :rules="rules" label-position="right" :label-width="100">
       <ElRow :gutter="16">
-        <!-- 菜单类型 -->
+        <ElCol :span="24">
+          <ElFormItem :label="$t('page.manage.menu.parentMenu')" prop="parentId">
+            <ElTreeSelect
+              v-model="model.parentId"
+              clearable
+              check-strictly
+              :data="parentMenuOptions"
+              :props="{ label: 'name', children: 'children', value: 'id' }"
+              node-key="id"
+              :render-after-expand="false"
+              :placeholder="$t('page.manage.menu.form.parentMenu')"
+            />
+          </ElFormItem>
+        </ElCol>
         <ElCol :span="24">
           <ElFormItem :label="$t('page.manage.menu.menuType')" prop="menuType">
             <ElRadioGroup v-model="model.menuType" :disabled="disabledMenuType">
@@ -175,21 +285,18 @@ watch(visible, () => {
           </ElFormItem>
         </ElCol>
 
-        <!-- 菜单名称 -->
         <ElCol :span="12">
           <ElFormItem :label="$t('page.manage.menu.menuName')" prop="name">
             <ElInput v-model="model.name" :placeholder="$t('page.manage.menu.form.menuName')" />
           </ElFormItem>
         </ElCol>
 
-        <!-- 路由路径 -->
         <ElCol v-if="showPath" :span="12">
           <ElFormItem :label="$t('page.manage.menu.routePath')" prop="path">
             <ElInput v-model="model.path" :placeholder="$t('page.manage.menu.form.routePath')" />
           </ElFormItem>
         </ElCol>
 
-        <!-- 组件路径 -->
         <ElCol v-if="showComponent" :span="12">
           <ElFormItem :label="$t('page.manage.menu.page')" prop="component">
             <ElSelect v-model="model.component" clearable :placeholder="$t('page.manage.menu.form.page')">
@@ -198,7 +305,6 @@ watch(visible, () => {
           </ElFormItem>
         </ElCol>
 
-        <!-- 图标 -->
         <ElCol v-if="showPath" :span="12">
           <ElFormItem :label="$t('page.manage.menu.icon')" prop="icon">
             <ElInput v-model="model.icon" :placeholder="$t('page.manage.menu.form.icon')">
@@ -209,23 +315,20 @@ watch(visible, () => {
           </ElFormItem>
         </ElCol>
 
-        <!-- 权限标识 -->
         <ElCol v-if="showPermission" :span="12">
-          <ElFormItem label="权限标识" prop="permission">
-            <ElInput v-model="model.permission" placeholder="请输入权限标识" />
+          <ElFormItem :label="$t('page.manage.menu.permission')" prop="permission">
+            <ElInput v-model="model.permission" :placeholder="$t('page.manage.menu.form.permission')" />
           </ElFormItem>
         </ElCol>
 
-        <!-- 排序 -->
         <ElCol :span="12">
           <ElFormItem :label="$t('page.manage.menu.order')" prop="sort">
             <ElInputNumber v-model="model.sort" class="w-full" :min="0" :placeholder="$t('page.manage.menu.form.order')" />
           </ElFormItem>
         </ElCol>
 
-        <!-- 是否显示 -->
         <ElCol :span="12">
-          <ElFormItem label="是否显示" prop="isShow">
+          <ElFormItem :label="$t('page.manage.menu.showInMenu')" prop="isShow">
             <ElRadioGroup v-model="model.isShow">
               <ElRadio :value="true" :label="$t('common.yesOrNo.yes')" />
               <ElRadio :value="false" :label="$t('common.yesOrNo.no')" />
@@ -233,7 +336,6 @@ watch(visible, () => {
           </ElFormItem>
         </ElCol>
 
-        <!-- 是否缓存 -->
         <ElCol v-if="showComponent" :span="12">
           <ElFormItem :label="$t('page.manage.menu.keepAlive')" prop="isCache">
             <ElRadioGroup v-model="model.isCache">
@@ -243,12 +345,19 @@ watch(visible, () => {
           </ElFormItem>
         </ElCol>
 
-        <!-- 是否外链 -->
         <ElCol v-if="showPath" :span="12">
-          <ElFormItem label="是否外链" prop="isExternal">
+          <ElFormItem :label="$t('page.manage.menu.externalLink')" prop="isExternal">
             <ElRadioGroup v-model="model.isExternal">
               <ElRadio :value="true" :label="$t('common.yesOrNo.yes')" />
               <ElRadio :value="false" :label="$t('common.yesOrNo.no')" />
+            </ElRadioGroup>
+          </ElFormItem>
+        </ElCol>
+
+        <ElCol v-if="showStatus" :span="12">
+          <ElFormItem :label="$t('page.manage.menu.menuStatus')" prop="status">
+            <ElRadioGroup v-model="model.status">
+              <ElRadio v-for="item in enableStatusOptions" :key="item.value" :value="item.value" :label="$t(item.label)" />
             </ElRadioGroup>
           </ElFormItem>
         </ElCol>

@@ -36,7 +36,9 @@ const { columns, data, loading } = useUIPaginatedTable({
       label: $t('page.manage.user.userGender'),
       width: 100,
       formatter: row => {
-        if (row.userGender === undefined) {
+        const userGender = row.userGender;
+
+        if (!userGender) {
           return '';
         }
 
@@ -45,9 +47,13 @@ const { columns, data, loading } = useUIPaginatedTable({
           2: 'danger'
         };
 
-        const label = $t(userGenderRecord[row.userGender]);
+        const labelKey = userGenderRecord[userGender];
 
-        return <ElTag type={tagMap[row.userGender]}>{label}</ElTag>;
+        if (!labelKey) {
+          return '';
+        }
+
+        return <ElTag type={tagMap[userGender]}>{$t(labelKey)}</ElTag>;
       }
     },
     { prop: 'nickName', label: $t('page.manage.user.nickName'), minWidth: 100 },

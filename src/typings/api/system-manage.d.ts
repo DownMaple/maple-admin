@@ -1,143 +1,88 @@
 declare namespace Api {
-  /**
-   * namespace SystemManage
-   *
-   * backend api module: "systemManage"
-   */
   namespace SystemManage {
     type CommonSearchParams = Pick<Common.PaginatingCommonParams, 'current' | 'size'>;
 
-    /** role */
-    type Role = Common.CommonRecord<{
-      /** role name */
+    type Role = {
+      id: string;
       roleName: string;
-      /** role code */
       roleCode: string;
-      /** role description */
       roleDesc: string;
-    }>;
-
-    /** role search params */
-    type RoleSearchParams = CommonType.RecordNullable<
-      Pick<Api.SystemManage.Role, 'roleName' | 'roleCode' | 'status'> & CommonSearchParams
-    >;
-
-    /** role list */
-    type RoleList = Common.PaginatingQueryRecord<Role>;
-
-    /** all role */
-    type AllRole = Pick<Role, 'id' | 'roleName' | 'roleCode'>;
-
-    /**
-     * user gender
-     *
-     * - "1": "male"
-     * - "2": "female"
-     */
-    type UserGender = '1' | '2';
-
-    /** user */
-    type User = Common.CommonRecord<{
-      /** user name */
-      userName: string;
-      /** user gender */
-      userGender: UserGender | undefined;
-      /** user nick name */
-      nickName: string;
-      /** user phone */
-      userPhone: string;
-      /** user email */
-      userEmail: string;
-      /** user role code collection */
-      userRoles: string[];
-    }>;
-
-    /** user search params */
-    type UserSearchParams = CommonType.RecordNullable<
-      Pick<Api.SystemManage.User, 'userName' | 'userGender' | 'nickName' | 'userPhone' | 'userEmail' | 'status'> &
-        CommonSearchParams
-    >;
-
-    /** user list */
-    type UserList = Common.PaginatingQueryRecord<User>;
-
-    /**
-     * menu type
-     *
-     * - "catalog": 目录
-     * - "menu": 菜单
-     * - "button": 按钮
-     */
-    type MenuType = 'catalog' | 'menu' | 'button';
-
-    type MenuButton = {
-      /**
-       * button code
-       *
-       * it can be used to control the button permission
-       */
-      code: string;
-      /** button description */
-      desc: string;
+      status: Common.EnableStatus | undefined;
+      createTime: string;
+      updateTime: string;
     };
 
-    /**
-     * icon type
-     *
-     * - "1": iconify icon
-     * - "2": local icon
-     */
-    type IconType = '1' | '2';
-
-    type MenuPropsOfRoute = Pick<
-      import('vue-router').RouteMeta,
-      | 'i18nKey'
-      | 'keepAlive'
-      | 'constant'
-      | 'order'
-      | 'href'
-      | 'hideInMenu'
-      | 'activeMenu'
-      | 'multiTab'
-      | 'fixedIndexInTab'
-      | 'query'
+    type RoleSearchParams = CommonType.RecordNullable<
+      Pick<Role, 'roleName' | 'roleCode' | 'status'> & CommonSearchParams
     >;
 
-    type Menu = Common.CommonRecord<{
-      /** parent menu id */
-      parentId: string | null;
-      /** menu type */
-      menuType: MenuType;
-      /** menu name */
-      name: string;
-      /** route path */
-      path: string | null;
-      /** component */
-      component: string | null;
-      /** iconify icon name or local icon name */
-      icon: string | null;
-      /** permission */
-      permission: string | null;
-      /** sort order */
-      sort: number;
-      /** is show in menu */
-      isShow: boolean;
-      /** is cache */
-      isCache: boolean;
-      /** is external link */
-      isExternal: boolean;
-      /** children menu */
-      children?: Menu[] | null;
-    }>;
+    type RoleList = Common.PaginatingQueryRecord<Role>;
 
-    /** menu list */
+    type AllRole = Pick<Role, 'id' | 'roleName' | 'roleCode'>;
+
+    type RolePermissionIdsResponse = {
+      ids: string[];
+    };
+
+    type UserGender = '1' | '2';
+
+    type User = {
+      id: string;
+      userName: string;
+      userGender: UserGender | null | undefined;
+      nickName: string;
+      userPhone: string;
+      userEmail: string;
+      userRoles: string[];
+      status: Common.EnableStatus | undefined;
+      createTime: string;
+      updateTime: string;
+    };
+
+    type UserSearchParams = CommonType.RecordNullable<
+      Pick<User, 'userName' | 'userGender' | 'nickName' | 'userPhone' | 'userEmail' | 'status'> & CommonSearchParams
+    >;
+
+    type UserList = Common.PaginatingQueryRecord<User>;
+
+    type MenuType = 'catalog' | 'menu' | 'button';
+
+    type IconType = '1' | '2';
+
+    type Menu = {
+      id: string;
+      parentId: string | null;
+      menuType: MenuType;
+      name: string;
+      path: string | null;
+      component: string | null;
+      icon: string | null;
+      permission: string | null;
+      sort: number;
+      isShow: boolean;
+      isCache: boolean;
+      isExternal: boolean;
+      status: Common.EnableStatus | number | undefined;
+      children?: Menu[] | null;
+    };
+
     type MenuList = Menu[];
 
     type MenuTree = {
-      id: number;
+      id: string;
+      name: string;
+      menuType: MenuType;
+      path: string | null;
+      component: string | null;
+      icon: string | null;
+      sort: number;
+      children?: MenuTree[] | null;
+    };
+
+    type ButtonOption = {
+      id: string;
       label: string;
-      pId: number;
-      children?: MenuTree[];
+      code: string;
     };
   }
 }

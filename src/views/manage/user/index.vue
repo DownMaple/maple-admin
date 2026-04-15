@@ -1,9 +1,10 @@
 <script setup lang="tsx">
-import { ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { ElButton, ElPopconfirm, ElTag } from 'element-plus';
 import { usePagination } from '@sa/alova/client';
 import { enableStatusRecord, userGenderRecord } from '@/constants/business';
-import { batchDeleteUser, deleteUser, fetchGetUserList } from '@/service/api';
+import { batchDeleteUser, deleteUser, fetchGetAllRoles, fetchGetUserList } from '@/service/api';
+import { useAuth } from '@/hooks/business/auth';
 import { $t } from '@/locales';
 import useCheckedColumns from './hooks/use-checked-columns';
 import useTableOperate from './hooks/use-table-operate';
@@ -11,6 +12,9 @@ import UserOperateDrawer from './modules/user-operate-drawer.vue';
 import UserSearch from './modules/user-search.vue';
 
 defineOptions({ name: 'UserManage' });
+
+const SUPER_ADMIN_USER_ID = 'b0000000-0000-0000-0000-000000000001';
+const SUPER_ADMIN_USER_NAME = 'superAdmin';
 
 const searchParams = ref({
   status: undefined,
@@ -20,6 +24,15 @@ const searchParams = ref({
   userPhone: undefined,
   userEmail: undefined
 });
+const roleNameMap = ref(new Map<string, string>());
+const { hasAuth } = useAuth();
+const canAddUser = computed(() => hasAuth('system:user:add'));
+const canEditUser = computed(() => hasAuth('system:user:edit'));
+const canDeleteUser = computed(() => hasAuth('system:user:delete'));
+
+function isProtectedUser(row: Api.SystemManage.User) {
+  return row.id === SUPER_ADMIN_USER_ID || row.userName === SUPER_ADMIN_USER_NAME;
+}
 
 const { loading, data, refresh, reload, page, pageSize, pageCount, send, remove, total } = usePagination(
   (pageNum, size) =>
@@ -65,8 +78,12 @@ const {
   }
 });
 
-function edit(id: number) {
+function edit(id: string) {
   handleEdit(id);
+}
+
+function handleSelectionChange(rows: Api.SystemManage.User[]) {
+  checkedRowKeys.value = rows.map(item => item.id);
 }
 
 function resetSearchParams() {
@@ -78,17 +95,29 @@ function resetSearchParams() {
     userPhone: undefined,
     userEmail: undefined
   };
+  getDataByPage(1);
+}
+
+async function getRoleNameMap() {
+  try {
+    const roles = await fetchGetAllRoles();
+    roleNameMap.value = new Map(roles.map(item => [item.roleCode, item.roleName]));
+  } catch {
+    roleNameMap.value = new Map();
+  }
 }
 
 const { columnChecks, columns } = useCheckedColumns<typeof fetchGetUserList>(() => [
-  { type: 'selection', width: 48 },
+  { type: 'selection', width: 48, selectable: row => canDeleteUser.value && !isProtectedUser(row) },
   { prop: 'userName', label: $t('page.manage.user.userName'), minWidth: 100 },
   {
     prop: 'userGender',
     label: $t('page.manage.user.userGender'),
     width: 100,
     formatter: row => {
-      if (row.userGender === undefined) {
+      const userGender = row.userGender;
+
+      if (!userGender) {
         return '';
       }
 
@@ -97,14 +126,38 @@ const { columnChecks, columns } = useCheckedColumns<typeof fetchGetUserList>(() 
         2: 'danger'
       };
 
-      const label = $t(userGenderRecord[row.userGender]);
+      const labelKey = userGenderRecord[userGender];
 
-      return <ElTag type={tagMap[row.userGender]}>{label}</ElTag>;
+      if (!labelKey) {
+        return '';
+      }
+
+      return <ElTag type={tagMap[userGender]}>{$t(labelKey)}</ElTag>;
     }
   },
   { prop: 'nickName', label: $t('page.manage.user.nickName'), minWidth: 100 },
   { prop: 'userPhone', label: $t('page.manage.user.userPhone'), width: 120 },
   { prop: 'userEmail', label: $t('page.manage.user.userEmail'), minWidth: 200 },
+  {
+    prop: 'userRoles',
+    label: $t('page.manage.user.userRole'),
+    minWidth: 180,
+    formatter: row => {
+      if (!row.userRoles.length) {
+        return '-';
+      }
+
+      return (
+        <div class="flex flex-wrap gap-6px">
+          {row.userRoles.map(roleCode => (
+            <ElTag key={roleCode} type="info">
+              {roleNameMap.value.get(roleCode) ?? roleCode}
+            </ElTag>
+          ))}
+        </div>
+      );
+    }
+  },
   {
     prop: 'status',
     label: $t('page.manage.user.userStatus'),
@@ -128,24 +181,52 @@ const { columnChecks, columns } = useCheckedColumns<typeof fetchGetUserList>(() 
     prop: 'operate',
     label: $t('common.operate'),
     width: 130,
-    formatter: row => (
-      <div class="flex-center gap-8px">
-        <ElButton type="primary" plain size="small" onClick={() => edit(row.id)}>
-          {$t('common.edit')}
-        </ElButton>
-        <ElPopconfirm title={$t('common.confirmDelete')} onConfirm={() => handleDelete(row.id)}>
-          {{
-            reference: () => (
-              <ElButton type="danger" plain size="small">
-                {$t('common.delete')}
-              </ElButton>
-            )
-          }}
-        </ElPopconfirm>
-      </div>
-    )
+    formatter: row => {
+      const protectedUser = isProtectedUser(row);
+
+      return (
+        <div class="flex-center gap-8px">
+          <ElButton
+            type="primary"
+            plain
+            size="small"
+            disabled={protectedUser || !canEditUser.value}
+            onClick={() => !protectedUser && canEditUser.value && edit(row.id)}
+          >
+            {$t('common.edit')}
+          </ElButton>
+          {protectedUser || !canDeleteUser.value ? (
+            <ElButton type="danger" plain size="small" disabled>
+              {$t('common.delete')}
+            </ElButton>
+          ) : (
+            <ElPopconfirm title={$t('common.confirmDelete')} onConfirm={() => handleDelete(row.id)}>
+              {{
+                reference: () => (
+                  <ElButton type="danger" plain size="small">
+                    {$t('common.delete')}
+                  </ElButton>
+                )
+              }}
+            </ElPopconfirm>
+          )}
+        </div>
+      );
+    }
   }
 ]);
+
+async function handleSubmitted() {
+  await Promise.all([reload(), getRoleNameMap()]);
+}
+
+async function handleRefresh() {
+  await Promise.all([refresh(), getRoleNameMap()]);
+}
+
+onMounted(() => {
+  void getRoleNameMap();
+});
 </script>
 
 <template>
@@ -157,11 +238,12 @@ const { columnChecks, columns } = useCheckedColumns<typeof fetchGetUserList>(() 
           <p>{{ $t('page.manage.user.title') }}</p>
           <TableHeaderOperation
             v-model:columns="columnChecks"
-            :disabled-delete="checkedRowKeys.length === 0"
+            :disabled-add="!canAddUser"
+            :disabled-delete="checkedRowKeys.length === 0 || !canDeleteUser"
             :loading="loading"
             @add="handleAdd"
             @delete="handleBatchDelete"
-            @refresh="refresh"
+            @refresh="handleRefresh"
           />
         </div>
       </template>
@@ -173,7 +255,7 @@ const { columnChecks, columns } = useCheckedColumns<typeof fetchGetUserList>(() 
           class="sm:h-full"
           :data="data"
           row-key="id"
-          @selection-change="checkedRowKeys = $event"
+          @selection-change="handleSelectionChange"
         >
           <ElTableColumn v-for="col in columns" :key="col.prop" v-bind="col" />
         </ElTable>
@@ -195,7 +277,7 @@ const { columnChecks, columns } = useCheckedColumns<typeof fetchGetUserList>(() 
         v-model:visible="drawerVisible"
         :operate-type="operateType"
         :row-data="editingData"
-        @submitted="reload"
+        @submitted="handleSubmitted"
       />
     </ElCard>
   </div>
