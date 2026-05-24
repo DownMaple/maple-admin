@@ -4,7 +4,10 @@ import { transformBackendMenusToRoutes } from '../utils/route-transform';
 
 /** get user routes */
 export async function fetchGetUserRoutes(): Promise<Api.Route.UserRoute> {
-  const menus = await alova.Get<Api.Route.BackendMenu[]>(`${API_VERSION.V1}/menu/getUserRoutes`);
+  const menus = await alova.Get<Api.Route.BackendMenu[]>(`${API_VERSION.V1}/menu/getUserRoutes`, {
+    cacheFor: 0,
+    shareRequest: false
+  });
   return transformBackendMenusToRoutes(menus ?? []);
 }
 

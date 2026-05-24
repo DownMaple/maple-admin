@@ -146,6 +146,21 @@ export function useUIPaginatedTable<ResponseData, ApiData>(options: UseUIPaginat
     await result.getData();
   }
 
+  /**
+   * 删除后安全刷新：若删除会导致当前页变空且不是第一页，则回退到上一页（由 watch 触发拉取），否则重新拉取当前页。
+   */
+  async function safeRefreshAfterDelete(deletedCount: number = 1) {
+    const remaining = result.data.value.length - deletedCount;
+    const currentPage = pagination.currentPage ?? 1;
+
+    if (remaining <= 0 && currentPage > 1) {
+      pagination.currentPage = currentPage - 1;
+      return;
+    }
+
+    await result.getData();
+  }
+
   scope.run(() => {
     watch(
       () => appStore.locale,
@@ -168,6 +183,7 @@ export function useUIPaginatedTable<ResponseData, ApiData>(options: UseUIPaginat
   return {
     ...result,
     getDataByPage,
+    safeRefreshAfterDelete,
     pagination,
     mobilePagination
   };

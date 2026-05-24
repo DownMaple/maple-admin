@@ -41,7 +41,7 @@ function getInitSearchParams(): Api.SystemManage.RoleSearchParams {
   };
 }
 
-const { columns, columnChecks, data, loading, getData, getDataByPage, pagination, mobilePagination } = useUIPaginatedTable({
+const { columns, columnChecks, data, loading, getData, getDataByPage, safeRefreshAfterDelete, pagination, mobilePagination } = useUIPaginatedTable({
   paginationProps: {
     currentPage: searchParams.current,
     pageSize: searchParams.size
@@ -148,21 +148,24 @@ const { columns, columnChecks, data, loading, getData, getDataByPage, pagination
   ]
 });
 
-const { drawerVisible, operateType, editingData, handleAdd, handleEdit, checkedRowKeys, onBatchDeleted, onDeleted } =
-  useTableOperate(data, 'id', getData);
+const { drawerVisible, operateType, editingData, handleAdd, handleEdit, checkedRowKeys } = useTableOperate(data, 'id', getData);
 
 async function handleBatchDelete() {
   if (!checkedRowKeys.value.length) {
     return;
   }
 
+  const deletedCount = checkedRowKeys.value.length;
   await batchDeleteRole(checkedRowKeys.value);
-  await onBatchDeleted();
+  window.$message?.success($t('common.deleteSuccess'));
+  checkedRowKeys.value = [];
+  await safeRefreshAfterDelete(deletedCount);
 }
 
 async function handleDelete(id: string) {
   await deleteRole(id);
-  await onDeleted();
+  window.$message?.success($t('common.deleteSuccess'));
+  await safeRefreshAfterDelete(1);
 }
 
 function resetSearchParams() {

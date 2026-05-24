@@ -19,7 +19,7 @@ interface Props {
 const props = defineProps<Props>();
 
 interface Emits {
-  (e: 'submitted'): void;
+  (e: 'submitted', operateType: UI.TableOperateType): void;
 }
 
 const emit = defineEmits<Emits>();
@@ -160,8 +160,9 @@ async function handleSubmit() {
       window.$message?.success($t('common.updateSuccess'));
     }
 
+    const submittedType: UI.TableOperateType = isAdd.value ? 'add' : 'edit';
     closeDrawer();
-    emit('submitted');
+    emit('submitted', submittedType);
   } catch {
     // error is already handled by alova
   }

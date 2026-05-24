@@ -27,11 +27,17 @@ function normalizeUserInfo(
 }
 
 function fetchGetUserInfoRaw() {
-  return alova.Get<Api.Auth.UserInfoRaw>(`${API_VERSION.V1}/auth/getUserInfo`);
+  return alova.Get<Api.Auth.UserInfoRaw>(`${API_VERSION.V1}/auth/getUserInfo`, {
+    cacheFor: 0,
+    shareRequest: false
+  });
 }
 
 export function fetchGetUserPermissions() {
-  return alova.Get<string[]>(`${API_VERSION.V1}/menu/permissions`);
+  return alova.Get<string[]>(`${API_VERSION.V1}/menu/permissions`, {
+    cacheFor: 0,
+    shareRequest: false
+  });
 }
 
 /** Get user info */

@@ -13,7 +13,6 @@ import { clearAuthStorage, getToken } from './shared';
 
 export const useAuthStore = defineStore(SetupStoreId.Auth, () => {
   const route = useRoute();
-  const authStore = useAuthStore();
   const routeStore = useRouteStore();
   const tabStore = useTabStore();
   const { toLogin, redirectFromLogin } = useRouterPush(false);
@@ -21,15 +20,19 @@ export const useAuthStore = defineStore(SetupStoreId.Auth, () => {
 
   const token = ref(getToken());
 
-  const userInfo: Api.Auth.UserInfo = reactive({
-    userId: '',
-    userName: '',
-    roles: [],
-    buttons: [],
-    currentRoleId: '',
-    currentRoleCode: '',
-    roleOptions: []
-  });
+  function createEmptyUserInfo(): Api.Auth.UserInfo {
+    return {
+      userId: '',
+      userName: '',
+      roles: [],
+      buttons: [],
+      currentRoleId: '',
+      currentRoleCode: '',
+      roleOptions: []
+    };
+  }
+
+  const userInfo: Api.Auth.UserInfo = reactive(createEmptyUserInfo());
 
   /** is super role in static route */
   const isStaticSuper = computed(() => {
@@ -41,20 +44,41 @@ export const useAuthStore = defineStore(SetupStoreId.Auth, () => {
   /** Is login */
   const isLogin = computed(() => Boolean(token.value));
 
+  function clearUserInfo() {
+    Object.assign(userInfo, createEmptyUserInfo());
+  }
+
+  function clearAuthState() {
+    token.value = '';
+    clearUserInfo();
+  }
+
+  /**
+   * Clear the previous login context before switching to a new account.
+   *
+   * This ensures dynamic routes and menus are rebuilt from the new token instead of reusing
+   * the previous account's permission state.
+   */
+  async function prepareLoginContext() {
+    recordUserId();
+    clearAuthStorage();
+    clearAuthState();
+    await routeStore.resetStore();
+  }
+
   /** Reset auth store */
   async function resetStore() {
     recordUserId();
 
     clearAuthStorage();
-
-    authStore.$reset();
+    clearAuthState();
 
     if (!route.meta.constant) {
       await toLogin();
     }
 
     tabStore.cacheTabs();
-    routeStore.resetStore();
+    await routeStore.resetStore();
   }
 
   /** Record the user ID of the previous login session Used to compare with the current user ID on next login */
@@ -129,6 +153,8 @@ export const useAuthStore = defineStore(SetupStoreId.Auth, () => {
   }
 
   async function loginByToken(loginToken: Api.Auth.LoginToken) {
+    await prepareLoginContext();
+
     // 1. stored in the localStorage, the later requests need it in headers
     localStg.set('token', loginToken.accessToken);
     localStg.set('refreshToken', loginToken.refreshToken);
@@ -141,6 +167,9 @@ export const useAuthStore = defineStore(SetupStoreId.Auth, () => {
 
       return true;
     }
+
+    clearAuthStorage();
+    clearAuthState();
 
     return false;
   }
